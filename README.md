@@ -8,19 +8,15 @@ database, cache, or other consuming components.
 
 Paths below are relative to `src/` and the package namespace.
 
-| Directory | Responsibility |
-| --- | --- |
-| `Naming` | `PropertyName`: canonical name validation and process-variable mapping. |
-| `PropertySource` | Array, process, and dotenv value sources. |
-| `Provider / Contract` | Default environment composition and component-owned access contracts. |
+| Directory             | Responsibility                                                                          |
+|-----------------------|-----------------------------------------------------------------------------------------|
+| `Conversion`          | `ConversionFailure`: typed-conversion failures that never include the configured value. |
+| `Naming`              | `PropertyName`: canonical name validation and process-variable mapping.                 |
+| `Precedence`          | `PropertyLookup`: raw lookup in the highest-precedence source that contains a property. |
+| `PropertySource`      | Array, process, and dotenv value sources.                                               |
+| `Provider / Contract` | Default environment composition and component-owned access contracts.                   |
 
 Implementation helpers retain an `@internal` boundary; a responsibility namespace does not make them extension points.
-
-### Public namespaces
-
-Use the following component declarations:
-
-- `Naming\PropertyName`
 
 ## Property sources
 

@@ -6,9 +6,10 @@ namespace SuperKernel\Environment;
 
 use SuperKernel\Environment\Contract\EnvironmentInterface;
 use SuperKernel\Environment\Contract\PropertySourceInterface;
-use SuperKernel\Environment\Exception\InvalidEnvironmentValueException;
+use SuperKernel\Environment\Conversion\ConversionFailure;
 use SuperKernel\Environment\Exception\InvalidPropertySourceException;
 use SuperKernel\Environment\Naming\PropertyName;
+use SuperKernel\Environment\Precedence\PropertyLookup;
 
 use function array_any;
 use function array_is_list;
@@ -63,20 +64,12 @@ final readonly class Environment implements EnvironmentInterface
 
     public function get(string $name): string|int|float|bool|null
     {
-        PropertyName::assertValid($name);
-
-        foreach (array_reverse($this->sources) as $source) {
-            if ($source->has($name)) {
-                return $source->get($name);
-            }
-        }
-
-        return null;
+        return PropertyLookup::get($this->sources, $name);
     }
 
     public function getString(string $name): ?string
     {
-        $value = $this->get($name);
+        $value = PropertyLookup::get($this->sources, $name);
 
         if (null === $value || is_string($value)) {
             return $value;
@@ -95,7 +88,7 @@ final readonly class Environment implements EnvironmentInterface
 
     public function getInt(string $name): ?int
     {
-        $value = $this->get($name);
+        $value = PropertyLookup::get($this->sources, $name);
 
         if (null === $value || is_int($value)) {
             return $value;
@@ -109,12 +102,12 @@ final readonly class Environment implements EnvironmentInterface
             }
         }
 
-        throw $this->invalidValue($name, 'an integer', $value);
+        throw ConversionFailure::invalidValue($name, 'an integer', $value);
     }
 
     public function getFloat(string $name): ?float
     {
-        $value = $this->get($name);
+        $value = PropertyLookup::get($this->sources, $name);
 
         if (null === $value) {
             return null;
@@ -132,12 +125,12 @@ final readonly class Environment implements EnvironmentInterface
             return $converted;
         }
 
-        throw $this->invalidValue($name, 'a finite number', $value);
+        throw ConversionFailure::invalidValue($name, 'a finite number', $value);
     }
 
     public function getBool(string $name): ?bool
     {
-        $value = $this->get($name);
+        $value = PropertyLookup::get($this->sources, $name);
 
         if (null === $value || is_bool($value)) {
             return $value;
@@ -151,24 +144,10 @@ final readonly class Environment implements EnvironmentInterface
             return match (strtolower(trim($value))) {
                 '1', 'true', 'yes', 'on'  => true,
                 '0', 'false', 'no', 'off' => false,
-                default                   => throw $this->invalidValue($name, 'a boolean', $value),
+                default                   => throw ConversionFailure::invalidValue($name, 'a boolean', $value),
             };
         }
 
-        throw $this->invalidValue($name, 'a boolean', $value);
-    }
-
-    private function invalidValue(
-        string $name,
-        string $expected,
-        mixed  $value,
-    ): InvalidEnvironmentValueException
-    {
-        return new InvalidEnvironmentValueException(sprintf(
-            'Environment property %s must be %s; %s provided.',
-            $name,
-            $expected,
-            get_debug_type($value),
-        ));
+        throw ConversionFailure::invalidValue($name, 'a boolean', $value);
     }
 }
