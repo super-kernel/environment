@@ -18,12 +18,6 @@ Paths below are relative to `src/` and the package namespace.
 
 Implementation helpers retain an `@internal` boundary; a responsibility namespace does not make them extension points.
 
-### Public namespaces
-
-Use the following component declarations:
-
-- `Naming\PropertyName`
-
 ## Property sources
 
 `Environment` accepts a list of `PropertySourceInterface` implementations. Sources are ordered from lowest to
