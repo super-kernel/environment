@@ -19,16 +19,16 @@ final class PropertyName
 {
     private const string PATTERN = '/\A[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*\z/';
 
-    private function __construct()
-    {
-    }
+    private const string INVALID_MESSAGE = 'Property names must use non-empty lowercase dotted or kebab notation.';
 
     /**
      * @return non-empty-string
      */
     public static function environmentVariable(string $name): string
     {
-        self::assertValid($name);
+        if (1 !== preg_match(self::PATTERN, $name)) {
+            throw new InvalidPropertyNameException(self::INVALID_MESSAGE);
+        }
 
         return strtoupper(str_replace([
             '.',
@@ -42,8 +42,6 @@ final class PropertyName
             return;
         }
 
-        throw new InvalidPropertyNameException(
-            'Property names must use non-empty lowercase dotted or kebab notation.',
-        );
+        throw new InvalidPropertyNameException(self::INVALID_MESSAGE);
     }
 }
