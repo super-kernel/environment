@@ -6,7 +6,7 @@
     "require": {
         "php": ">=8.4.27 <8.5",
         "ext-filter": "*",
-        "super-kernel/attribute": "dev-main",
+        "super-kernel/attribute": "self.version",
         "symfony/dotenv": "^8.1.6"
     },
     "require-dev": {
