@@ -4,28 +4,93 @@
 
 # SuperKernel Environment
 
-`super-kernel/environment` exposes ordered external property sources through a strict, typed object API. It owns source precedence and scalar conversion, but it does not define defaults or validation policy for Framework, Server, database, cache, or other consuming components.
+`super-kernel/environment` reads external properties, such as environment variables and `.env` files, from ordered sources and returns them as strictly checked strings, integers, floats, and booleans.
 
-## Property sources
+## Installation
 
-`Environment` accepts a list of `PropertySourceInterface` implementations. Sources are ordered from lowest to highest precedence, so a value in a later source overrides the same property from every earlier source. The package includes array, optional or required dotenv-file, and process-environment sources.
-
-Canonical property names use lowercase dotted or kebab notation, for example:
-
-```text
-app.feature.enabled
+```bash
+composer require super-kernel/environment
 ```
 
-Process and dotenv sources map that name to:
+The package needs the `filter` extension, which PHP includes by default, and installs `symfony/dotenv` to parse `.env` files.
 
-```text
-APP_FEATURE_ENABLED
+## What it provides
+
+- An environment that reads properties from a list of sources, where a later source overrides an earlier one.
+- Sources for arrays, `.env` files, and the process environment.
+- Typed accessors that return `null` for a missing property and reject an explicit value of the wrong kind.
+- One property name, such as `mail.port`, for every source: process and `.env` sources read it as `MAIL_PORT`.
+- A container entry for `EnvironmentInterface` that reads the process environment.
+
+It does not:
+
+- define defaults or check values for other components; your configuration sources do;
+- change `$_ENV`, `$_SERVER`, or the process environment when it reads a `.env` file;
+- offer profiles, remote configuration, or reloading.
+
+## Quick start
+
+Read typed values with defaults below the process environment. Save the script as `bin/environment.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use SuperKernel\Environment\Environment;
+use SuperKernel\Environment\PropertySource\ArrayPropertySource;
+use SuperKernel\Environment\PropertySource\ProcessEnvironmentPropertySource;
+
+require dirname(__DIR__) . '/vendor/autoload.php';
+
+$environment = new Environment([
+    new ArrayPropertySource('defaults', ['app.debug' => 'off', 'app.workers' => '4']),
+    new ProcessEnvironmentPropertySource(),
+]);
+
+var_dump($environment->getBool('app.debug'));
+var_dump($environment->getInt('app.workers'));
+var_dump($environment->getString('app.name'));
 ```
 
-A dotenv source reads one immutable snapshot without mutating `$_ENV`, `$_SERVER`, or the process environment. A missing optional file contributes no values; a missing required file raises `PropertySourceLoadingException`.
+Run the script with a process variable:
 
-## Typed access
+```bash
+APP_DEBUG=yes php bin/environment.php
+```
 
-`EnvironmentInterface` exposes raw scalar lookup plus string, integer, float, and boolean conversion. Missing values return `null`. Invalid explicit values raise `InvalidEnvironmentValueException` without including the configured value in the exception message. Component configuration factories apply their own defaults only after a missing lookup and validate their domain-specific invariants.
+It prints:
 
-The default `EnvironmentProvider` installs only the process environment. An application may provide its own `EnvironmentInterface` implementation to add a project-root dotenv file or another source before the process source.
+```text
+bool(true)
+int(4)
+NULL
+```
+
+## Public surface
+
+| Name | Kind | Purpose |
+| --- | --- | --- |
+| `SuperKernel\Environment\Contract\EnvironmentInterface` | Interface | `has()`, raw `get()`, and typed `getString()`, `getInt()`, `getFloat()`, and `getBool()`. |
+| `SuperKernel\Environment\Environment` | Class | The environment over a list of sources, ordered from lowest to highest precedence. |
+| `SuperKernel\Environment\Contract\PropertySourceInterface` | Interface | Implemented by a source: its name, whether it has a property, and the raw value. |
+| `SuperKernel\Environment\PropertySource\ArrayPropertySource` | Class | Properties from an array, keyed by property name. |
+| `SuperKernel\Environment\PropertySource\DotenvPropertySource` | Class | Properties from one `.env` file, optional by default. |
+| `SuperKernel\Environment\PropertySource\ProcessEnvironmentPropertySource` | Class | Properties from the process environment. |
+| `SuperKernel\Environment\Provider\EnvironmentProvider` | Class | The factory provider of `EnvironmentInterface`, reading the process environment only. |
+
+## Behavior to know
+
+- Property names are lowercase, with dots or hyphens, such as `mail.port` or `app.feature-flag`. Any other name raises `SuperKernel\Environment\Exception\InvalidPropertyNameException` with the message `Property names must use non-empty lowercase dotted or kebab notation.`
+- A typed accessor raises `SuperKernel\Environment\Exception\InvalidEnvironmentValueException` for a value of the wrong kind, such as `Environment property app.workers must be an integer; string provided.` The message never contains the value.
+- Booleans accept `1`, `0`, `true`, `false`, `yes`, `no`, `on`, and `off`, in any case.
+- A required `.env` file that is missing, unreadable, or malformed raises `SuperKernel\Environment\Exception\PropertySourceLoadingException`; a missing optional file contributes nothing.
+- The container's default environment does not read `.env` files; an application adds one by providing its own `EnvironmentInterface`.
+
+## Documentation
+
+The developer documentation describes the sources, precedence, conversions, `.env` files, and use in an application with complete examples: [SuperKernel Environment](https://github.com/super-kernel/.github/blob/main/docs/components/environment.md).
+
+## License
+
+Released under the MIT License. See [LICENSE](LICENSE).
